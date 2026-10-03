@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Códigos Útiles</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <header>
+    <h1>Códigos repetitivos útiles</h1>
+    <p>Reutilizables en diferentes proyectos</p>
+  </header>
+
+  <main>
+    <section class="contenido">
+      <h2>Importante</h2>
+      <p>
+        Lo que se repite es la estructura, las definiciones pueden variar dependiendo el proyecto.
+        Los paquetes "config" y "utiles" (usados en algunos proyectos) se copian y pegan sin modificar nada.
+      </p>
+
+      <a class="boton" href="index.html">Volver al inicio</a>
+    </section>
+  </main>
+
+  <section class="contenido">
+      <h2>Entities</h2>
+      <pre><code>
+package ar.com.tecnico.entities;
+
+import jakarta.persistence.*;
+import java.io.Serializable;
+
+@Entity
+@Table(name = "clientes")
+public class Clientes implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
+
+    private String apellido;
+
+    private String direccion;
+
+    private String email;
+
+    private String nombre;
+
+    private String nrodoc;
+
+    private String telefono;
+
+    @ManyToOne
+    @JoinColumn(name = "id_tipodoc", nullable = false)
+    private TiposDoc tipodoc;
+
+    @ManyToOne
+    @JoinColumn(name = "id_usuario")
+    private Usuarios usuario;
+
+    //GETTERS Y SETTERS...
+        </pre></code>
+    </section>
+  
+    <section class="contenido">
+      <h2>Controller</h2>
+      <pre><code>
+package ar.com.tecnico.controller;
+
+import ar.com.tecnico.entities.Clientes;
+import ar.com.tecnico.entities.TiposDoc;
+import ar.com.tecnico.entities.Usuarios;
+import ar.com.tecnico.services.IClientesService;
+import ar.com.tecnico.services.ITiposDocService;
+import ar.com.tecnico.services.IUsuariosService;
+import ar.com.tecnico.utiles.PageWrapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@Controller
+public class ClientesController {
+
+    @Autowired
+    private IClientesService entityService;
+
+    @Autowired
+    private ITiposDocService tiposDocService;
+
+    @Autowired
+    private IUsuariosService usuariosService;
+
+    @RequestMapping(value = "/clientes", method = RequestMethod.GET)
+    public String list(Model model, Pageable pageable) {
+        Page<Clientes> centroPage = entityService.findAll(pageable);
+        PageWrapper<Clientes> page = new PageWrapper<Clientes>(centroPage,"/clientes");
+        model.addAttribute("entities", page.getContent());
+        model.addAttribute("page", page);
+        model.addAttribute("entity", new Clientes());
+        return "../clientes/index";
+    }
+
+    @RequestMapping("/clientes/refresh")
+    public String refresh() { return "redirect:/clientes";}
+
+    @RequestMapping(value = "/clientes/search", method = RequestMethod.POST)
+        public String search(Model model, Clientes entity) {
+            if (entity.getApellido().equals("")){
+                return refresh();
+        }
+        model.addAttribute("entities", entityService.findByApellido(entity.getApellido()));
+        model.addAttribute("entity", new Clientes());
+        model.addAttribute("page", null);
+        return "../clientes/index";
+    }
+
+    @RequestMapping("/clientes/create/{id}")
+    public String create(@PathVariable Integer id, Model model) {
+        model.addAttribute("entity", new Clientes());
+        List<TiposDoc> listaTiposDoc = tiposDocService.getAll();
+        model.addAttribute("tiposdoc", listaTiposDoc);
+
+        List<Usuarios> listaUsuarios = usuariosService.getAll();
+        model.addAttribute("usuarios",listaUsuarios);
+        return "../clientes/edit";
+    }
+
+    @RequestMapping("/clientes/edit/{id}")
+    public String edit(@PathVariable Integer id, Model model) {
+        model.addAttribute("entity", entityService.get(id));
+        List<TiposDoc> listaTiposDoc = tiposDocService.getAll();
+        model.addAttribute("tiposdoc", listaTiposDoc);
+
+        List<Usuarios> listaUsuarios = usuariosService.getAll();
+        model.addAttribute("usuarios",listaUsuarios);
+        return "../clientes/edit";
+    }
+
+    @RequestMapping(value = "clientes", method = RequestMethod.POST)
+    public String save(Model model, @Validated Clientes entity){
+        if (entity.getApellido().equals("")) {
+            model.addAttribute("message", "Incorrecto");
+            model.addAttribute("entity", entity);
+            return "../clientes/edit";
+        }
+        entityService.save(entity);
+        return "redirect:/clientes";
+    }
+
+    @RequestMapping("clientes/delete/{id}")
+    public String delete(@PathVariable Integer id, Model model, Pageable pageable) {
+        try {
+            Clientes entity = entityService.get(id);
+            entityService.delete(entity);
+            return "redirect:/clientes";
+        } catch (Exception e) {
+            model.addAttribute("message", e.getMessage().toString());
+            Page<Clientes> centroPage = entityService.findAll(pageable);
+            PageWrapper<Clientes> page = new PageWrapper<Clientes>(centroPage, "/clientes");
+            model.addAttribute("entities", page.getContent());
+            model.addAttribute("page", page);
+            model.addAttribute("entity", new Clientes());
+            return "../clientes/index";
+        }
+    }
+}
+      </pre></code>
+    </section>
+
+    <section class="contenido">
+      <h2>Dao</h2>
+      <pre><code>
+package ar.com.tecnico.dao;
+
+import ar.com.tecnico.entities.Clientes;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface IClientesDao extends JpaRepository<Clientes, Integer> {
+
+    @Query("SELECT c FROM Clientes c WHERE c.apellido LIKE ?1 OR c.nombre LIKE ?1")
+    List<Clientes> findByApellido(String expresion);
+}
+      </pre></code>
+    </section>
+
+    <section class="contenido">
+      <h2>Services</h2>
+      <pre><code>
+package ar.com.tecnico.services;
+
+import ar.com.tecnico.entities.Clientes;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
+import java.util.List;
+
+public interface IClientesService {
+
+    List<Clientes> getAll();
+
+    List<Clientes> findByApellido(String expresion);
+
+    Clientes get(Integer id);
+
+    void save(Clientes entity);
+
+    String delete(Clientes entity);
+
+    Page<Clientes> findAll(Pageable pageable);
+}
+      </pre></code>
+    </section>
+
+    <section class="contenido">
+      <h2>Servicesimp</h2>
+      <pre><code>
+package ar.com.tecnico.servicesimp;
+
+import ar.com.tecnico.dao.IClientesDao;
+import ar.com.tecnico.entities.Clientes;
+import ar.com.tecnico.services.IClientesService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+@Service
+public class ClientesService implements IClientesService {
+
+    @Autowired
+    private IClientesDao entityDao;
+
+    public List<Clientes> getAll() { return entityDao.findAll(Sort.by(Sort.Direction.ASC, "apellido"));}
+
+    public Page<Clientes> findAll(Pageable pageable) {
+        return entityDao.findAll(PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(Sort.Direction.ASC, "apellido")));
+    }
+
+    public List<Clientes> findByApellido(String apellido) { return entityDao.findByApellido("%" + apellido + "%");}
+
+    public Clientes get(Integer id) { return entityDao.findById(id).orElse(null);}
+
+    @Transactional
+    public void save(Clientes entity) {entityDao.save(entity);}
+
+    @Transactional
+    public String delete(Clientes entity) {
+        try {
+            entityDao.delete(entity);
+            return null;
+        } catch (Exception e) {
+            return e.getMessage().toString();
+        }
+    }
+
+
+}
+      </pre></code>
+    </section>
+
+    <section class="contenido">
+      <h2>Clase Main</h2>
+      <pre><code>
+package ar.com.tecnico;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.web.servlet.config.annotation.EnableWebMvc;
+
+@SpringBootApplication
+@EnableWebMvc
+public class TecnicoApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(TecnicoApplication.class, args);
+	}
+
+}
+      </pre></code>
+    </section>
+
+
+</body>
+<footer>
+    <p>&copy; 2026 Mi página web</p>
+</footer>
+</html>
