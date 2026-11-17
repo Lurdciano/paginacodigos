@@ -40,6 +40,13 @@ PaginaProyectosGitHub/
 ├── seccion-3.html      # 🗄️ Consultas MySQL trabajadas en clase
 ├── seccion-4.html      # 🚀 Proyectos funcionales del cursado
 │
+├── favicon.svg         # Favicon vectorial (escalable y nítido en alta resolución)
+├── favicon.ico         # Favicon multi-resolución (16x16, 32x32, 48x48)
+├── favicon-32x32.png   # Favicon estándar para navegadores modernos
+├── favicon-16x16.png   # Favicon compacto para pestañas
+├── apple-touch-icon.png# Ícono para dispositivos Apple / accesos directos móviles
+├── site.webmanifest    # Manifiesto web para Android y navegadores móviles
+│
 └── README.md           # Documentación general del repositorio
 ```
 
